@@ -1,0 +1,138 @@
+Functions:
+    
+    1) Open Craigslist and search a category 
+    2) Scrape a page in Craigslist
+    3) Add scraped data to database
+
+
+?
+
+from selenium import webdriver
+from selenium.webdriver.support.wait import WebDriverWait
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.options import Options
+import bs4
+import time
+import pandas as pd
+from datetime import datetime
+
+
+
+#Create DataFrame
+pd.set_option('display.max_colwidth', -1)
+index = range(0, 10000)
+df = pd.DataFrame(index=index, columns=('Title', 'Url', 'Text', 'Date Posted',
+'Date Pulled', 'Contact Details', 'Post Id', 'City', 'Available Date', 'Attributes', 
+'Apartment Address', 'Apartment Price',  'PostalCode', 'Flagged for Scam'))
+
+
+#Open Craiglist and Search and Scroll (Main)
+
+driver = webdriver.Chrome("C:\Users\Kye Andreopoulus\Desktop\chromedriver.exe")
+driver.set_page_load_timeout(30)
+url10='https://toronto.craigslist.ca/search/tor/apa?query=bachelor'
+
+b=0
+pagenumber = 0
+craigslist = ['', '100', '200', '300']
+for z in craigslist:
+    pagenumber = pagenumber + 1
+    if pagenumber == 2:
+        url10 = url10 + '&s=' + str(z)
+    elif pagenumber > 2:
+        end = url10.find('&s=')
+        url10 = url10[:end] + '&s=' + str(z)
+
+    driver.get(url10)
+    time.sleep(5)
+    html = driver.page_source
+    soup = bs4.BeautifulSoup(html, 'lxml')
+    find = soup.find_all('a', {"class": "result-title hdrlnk"})
+    for x in find:        
+        a = ''
+        title = x.text.strip().replace('   ', ' ').replace('  ', ' ')
+        df.loc[b]['Title']= title
+        df.loc[b]['Url']= driver.current_url
+        try:
+            link = driver.find_element_by_link_text(title)
+        except:
+            print 'No Link'
+            continue
+        time.sleep(5)
+        driver.execute_script("arguments[0].click();", link)
+        #link.click()
+        time.sleep(5)
+        html2 = driver.page_source
+        soup2 = bs4.BeautifulSoup(html2, 'lxml')
+        findprice = soup2.find_all('span', {'class': 'price'})
+        for x in findprice:
+            price = x.text
+
+        df.loc[b]['Apartment Price'] = price.strip()
+
+        
+        
+        
+        findtext=soup2.find_all('section', {'id': 'postingbody'})
+        for x in this:
+            text=x.text
+        
+        df.loc[b]['Text']=text
+        
+            
+            
+        findtime=soup2.find_all('time')
+        for x in findtime:
+            posted=x.text
+           
+            break
+            
+        df.loc[b]['Date Posted']=posted
+        
+        df.loc[b]['Date Pulled']= str(datetime.now())
+        
+        df.loc[b]['Post Id']= driver.current_url[driver.current_url.rindex('/')+1:driver.current_url.index('.html')]
+        
+        df.loc[b]['City']= 'Toronto'
+        
+        movedate='n/a'
+        findmovedate=soup2.find_all('span', {'class': 'housing_movein_now property_date shared-line-bubble'})
+        for x in findmovedate:
+            movedate=x.text
+            print x.text
+            
+        df.loc[b]['Available Date']=movedate
+            
+        findaddress=soup2.find_all('div', {'class': 'mapaddress'})
+        for x in findaddress:
+            address=x.text
+            print address
+        
+        if address == '' or 'google' in a:
+            findthis = soup2.find_all('small')
+            for address2 in findthis:
+                address = address2.text.strip()[1:-1]
+        
+        df.loc[b]['Apartment Address']=address
+        
+        
+        #postal code - need to use google maps API
+
+        
+        
+        
+        
+        
+        
+        
+        driver.execute_script("window.history.go(-1)")
+        time.sleep(3)
+
+        
+        
+        b=b+1
+        print b
+        
+        if b=='10':
+            break
